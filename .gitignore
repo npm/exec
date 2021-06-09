@@ -1,20 +1,15 @@
-# ignore everything
-*
+# ignore everything in the root
+/*
 
 # keep these
 !/.github
-!/.github/**
 !**/.gitignore
 !/package.json
 !/package-lock.json
 !/bin
-!/bin/**
 !/lib
-!/lib/**
 !/map.js
 !/tap-snapshots
-!/tap-snapshots/**
 !/test
-!/test/**
 !/README*
 !/LICENSE*
