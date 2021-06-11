@@ -6,6 +6,7 @@ use cases and conventions.
 It does a few things beyond `child_process.spawn()`, namely:
 
 - Returns a `Promise`, thanks to [@npmcli/promise-spawn](https://github.com/npm/promise-spawn)
+- When running as `root`, infers a uid and gid to run as based on the current working directory
 
 ## Usage
 

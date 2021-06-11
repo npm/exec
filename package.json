@@ -31,6 +31,7 @@
     "tap": "^15.0.9"
   },
   "dependencies": {
-    "@npmcli/promise-spawn": "^2.0.0"
+    "@npmcli/promise-spawn": "^2.0.0",
+    "infer-owner": "^1.0.4"
   }
 }
