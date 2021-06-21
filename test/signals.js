@@ -1,3 +1,4 @@
+const { EventEmitter } = require('events')
 const spawk = require('spawk')
 const t = require('tap')
 
@@ -28,19 +29,16 @@ const randomSignals = (count) => {
 // we need to be able to test multiple signals to the same child. this is
 // currently a limitation of spawk, when it can tell what signals a child
 // received then this can go away
-const sendSignal = (signal) => {
+const sendSignal = (emitter, signal) => {
   let resolve
   const promise = new Promise((_resolve) => {
     resolve = _resolve
   })
 
-  process.once(signal, () => {
+  emitter.once(signal, () => {
     resolve()
   })
-
-  setTimeout(() => {
-    process.kill(process.pid, signal)
-  }, 0)
+  emitter.emit(signal, signal)
 
   return promise
 }
@@ -64,27 +62,27 @@ spawk.preventUnmatched()
 t.beforeEach((t) => {
   spawk.clean()
 
-  // tap and node both install their own signal handlers, if any currently exist
-  // we need to remove them before each test is run and then restore them
-  // afterwards so that our tests do not cause side effects
-  for (const signal of signals) {
-    // rawListeners keeps the once wrappers in place for existing handlers,
-    // use that so when we put them back they function exactly as intended
-    const listeners = process.rawListeners(signal)
-    if (listeners.length > 0) {
-      t.context[signal] = listeners
-      process.removeAllListeners(signal)
-    }
+  // in order to test this reliably in all platforms, we can't send actual kill
+  // signals because Windows emulates this behavior behind the scenes. instead,
+  // we save the methods that we care about from the real process object, then
+  // replace them with methods from a per-test EventEmitter instance, allowing
+  // us to reliably test that our listeners are attached and removed, to emit
+  // arbitrary signals even on Windows, and to not interfere with any existing
+  // real hooks that may be in place
+  t.context.previous = {
+    on: process.on,
+    removeListener: process.removeListener,
   }
+
+  t.context.events = new EventEmitter()
+  process.on = (...args) => t.context.events.on(...args)
+  process.removeListener = (...args) => t.context.events.removeListener(...args)
 })
 
 t.afterEach((t) => {
-  for (const signal of signals) {
-    // if we saved listeners for this signal, put them back
-    const listeners = t.context[signal] || []
-    for (const listener of listeners)
-      process.on(signal, listener)
-  }
+  // restore the real process methods
+  process.on = t.context.previous.on
+  process.removeListener = t.context.previous.removeListener
 })
 
 t.test('forwards a signal to a background process only once', async (t) => {
@@ -99,7 +97,7 @@ t.test('forwards a signal to a background process only once', async (t) => {
 
   // calling exec should've added the signal handlers, make sure they're there
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
   // we actually ran and passed the correct parameters
   t.ok(interceptor.called, 'called child_process.spawn()')
@@ -110,7 +108,7 @@ t.test('forwards a signal to a background process only once', async (t) => {
   }, 'passed the correct parameters to child_process.spawn()')
 
   // send the signal, no need to wait for it since the child will reject
-  sendSignal(signal)
+  sendSignal(t.context.events, signal)
 
   // if the parent appropriately forwarded the signal, the child will reject
   // with that signal. make sure that the error doesn't lose relevant context
@@ -123,7 +121,7 @@ t.test('forwards a signal to a background process only once', async (t) => {
 
   // after the child has exited, the signal handlers should all be gone
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 0, `all ${signal} handlers removed`)
+    t.equal(t.context.events.listenerCount(signal), 0, `all ${signal} handlers removed`)
 })
 
 t.test('forwards a signal to multiple background children only once', async (t) => {
@@ -151,7 +149,7 @@ t.test('forwards a signal to multiple background children only once', async (t) 
     const child = exec(command, args, options, extra)
 
     for (const signal of signals)
-      t.equal(process.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
+      t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
     t.ok(interceptor.called, 'called child_process.spawn()')
     t.match(interceptor.calledWith, {
@@ -174,7 +172,7 @@ t.test('forwards a signal to multiple background children only once', async (t) 
   })
 
   // send the first signal, this should cause only one child to exit
-  sendSignal(childSignals[0])
+  sendSignal(t.context.events, childSignals[0])
   await children[0]
 
   // at this point, one child will have been killed and rejected. the second
@@ -185,7 +183,7 @@ t.test('forwards a signal to multiple background children only once', async (t) 
   // the signal handlers should be gone though, since both children already
   // had a signal forwarded to them and they're running in the background
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 0, `${signal} no longer has any handlers`)
+    t.equal(t.context.events.listenerCount(signal), 0, `${signal} no longer has any handlers`)
 
   // now we can resolve the promise that allows the other child to exit
   setTimeout(() => {
@@ -213,7 +211,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
   const child = exec(command, args, options, extra)
 
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
   t.ok(interceptor.called, 'called child_process.spawn()')
   t.match(interceptor.calledWith, {
@@ -223,14 +221,14 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
   }, 'passed the correct parameters to child_process.spawn()')
 
   // send the ignored signal and wait to make sure we get it
-  await sendSignal(ignoredSignal)
+  await sendSignal(t.context.events, ignoredSignal)
 
   // make sure the signal handlers are all still in place
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} still has one handler after forwarding`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} still has one handler after forwarding`)
 
   // now send the exit signal
-  sendSignal(exitSignal)
+  sendSignal(t.context.events, exitSignal)
 
   // and wait for the promise to reject
   await t.rejects(child, {
@@ -241,7 +239,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
   })
 
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 0, `all ${signal} handlers removed`)
+    t.equal(t.context.events.listenerCount(signal), 0, `all ${signal} handlers removed`)
 })
 
 t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,inherit,inherit]', async (t) => {
@@ -257,7 +255,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
   const child = exec(command, args, options, extra)
 
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
   t.ok(interceptor.called, 'called child_process.spawn()')
   t.match(interceptor.calledWith, {
@@ -267,14 +265,14 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
   }, 'passed the correct parameters to child_process.spawn()')
 
   // send the ignored signal and wait to make sure we get it
-  await sendSignal(ignoredSignal)
+  await sendSignal(t.context.events, ignoredSignal)
 
   // make sure the signal handlers are all still in place
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} still has one handler after forwarding`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} still has one handler after forwarding`)
 
   // now send the exit signal
-  sendSignal(exitSignal)
+  sendSignal(t.context.events, exitSignal)
 
   // and wait for the promise to reject
   await t.rejects(child, {
@@ -285,7 +283,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
   })
 
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 0, `all ${signal} handlers removed`)
+    t.equal(t.context.events.listenerCount(signal), 0, `all ${signal} handlers removed`)
 })
 
 t.test('forwards signals to multiple foreground children until they exit', async (t) => {
@@ -302,7 +300,7 @@ t.test('forwards signals to multiple foreground children until they exit', async
     const child = exec(command, args, options, extra)
 
     for (const signal of signals)
-      t.equal(process.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
+      t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
     t.ok(interceptor.called, 'called child_process.spawn()')
     t.match(interceptor.calledWith, {
@@ -329,7 +327,7 @@ t.test('forwards signals to multiple foreground children until they exit', async
   })
 
   // send the first signal, this should cause only one child to exit
-  sendSignal(childSignals[0])
+  sendSignal(t.context.events, childSignals[0])
   await t.rejects(children[0].child, children[0].assertion)
 
   // at this point, one child will have been killed and rejected. the second
@@ -340,10 +338,10 @@ t.test('forwards signals to multiple foreground children until they exit', async
   // the signal handlers should be gone though, since both children already
   // had a signal forwarded to them and they're running in the background
   for (const signal of signals)
-    t.equal(process.listenerCount(signal), 1, `${signal} still has one handler`)
+    t.equal(t.context.events.listenerCount(signal), 1, `${signal} still has one handler`)
 
   // now we send the second signal
-  sendSignal(childSignals[1])
+  sendSignal(t.context.events, childSignals[1])
 
   // and make sure it also rejects correctly
   return t.rejects(children[1].child, children[1].assertion)
