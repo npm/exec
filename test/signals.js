@@ -111,11 +111,17 @@ t.test('forwards a signal to a background process only once', async (t) => {
   sendSignal(t.context.events, signal)
 
   // if the parent appropriately forwarded the signal, the child will reject
-  // with that signal. make sure that the error doesn't lose relevant context
+  // with that signal. make sure that the error doesn't lose relevant context.
+  // note that in windows, the close event never sets a signal, instead it
+  // sets the code to 1 so the assertion is slightly different there.
   await t.rejects(child, {
     cmd: command,
     args,
-    signal,
+    ...(
+      process.platform === 'windows'
+        ? { code: 1 }
+        : { signal }
+    ),
     ...extra,
   })
 
@@ -162,9 +168,13 @@ t.test('forwards a signal to multiple background children only once', async (t) 
     // running
     if (index === 0) {
       return t.rejects(child, {
-        signal,
         cmd: command,
         args,
+        ...(
+          process.platform === 'windows'
+            ? { code: 1 }
+            : { signal }
+        ),
         ...extra,
       })
     } else
@@ -234,7 +244,11 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
   await t.rejects(child, {
     cmd: command,
     args,
-    signal: exitSignal,
+    ...(
+      process.platform === 'windows'
+        ? { code: 1 }
+        : { signal: exitSignal }
+    ),
     ...extra,
   })
 
@@ -278,7 +292,11 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
   await t.rejects(child, {
     cmd: command,
     args,
-    signal: exitSignal,
+    ...(
+      process.platform === 'windows'
+        ? { code: 1 }
+        : { signal: exitSignal }
+    ),
     ...extra,
   })
 
@@ -312,18 +330,16 @@ t.test('forwards signals to multiple foreground children until they exit', async
     return {
       child,
       assertion: {
-        signal,
         cmd: command,
         args,
+        ...(
+          process.platform === 'windows'
+            ? { code: 1 }
+            : { signal }
+        ),
         ...extra,
       },
     }
-    // return t.rejects(child, {
-    //   signal,
-    //   cmd: command,
-    //   args,
-    //   ...extra,
-    // })
   })
 
   // send the first signal, this should cause only one child to exit
