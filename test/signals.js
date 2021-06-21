@@ -118,7 +118,7 @@ t.test('forwards a signal to a background process only once', async (t) => {
     cmd: command,
     args,
     ...(
-      process.platform === 'windows'
+      process.platform === 'win32'
         ? { code: 1 }
         : { signal }
     ),
@@ -171,7 +171,7 @@ t.test('forwards a signal to multiple background children only once', async (t) 
         cmd: command,
         args,
         ...(
-          process.platform === 'windows'
+          process.platform === 'win32'
             ? { code: 1 }
             : { signal }
         ),
@@ -245,7 +245,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
     cmd: command,
     args,
     ...(
-      process.platform === 'windows'
+      process.platform === 'win32'
         ? { code: 1 }
         : { signal: exitSignal }
     ),
@@ -293,7 +293,7 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
     cmd: command,
     args,
     ...(
-      process.platform === 'windows'
+      process.platform === 'win32'
         ? { code: 1 }
         : { signal: exitSignal }
     ),
@@ -333,7 +333,7 @@ t.test('forwards signals to multiple foreground children until they exit', async
         cmd: command,
         args,
         ...(
-          process.platform === 'windows'
+          process.platform === 'win32'
             ? { code: 1 }
             : { signal }
         ),
