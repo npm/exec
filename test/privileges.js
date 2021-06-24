@@ -1,3 +1,4 @@
+const { Formatter } = require('puka')
 const inferOwner = require('infer-owner')
 const spawk = require('spawk')
 const t = require('tap')
@@ -9,11 +10,13 @@ spawk.preventUnmatched()
 // calling exec as the root user
 t.beforeEach((t) => {
   spawk.clean()
+  Formatter.default = Formatter.for('linux')
   t.context.getuid = process.getuid
   process.getuid = () => 0
 })
 
 t.afterEach((t) => {
+  Formatter.default = undefined
   process.getuid = t.context.getuid
 })
 
@@ -24,7 +27,9 @@ t.test('infers uid/gid based on options.cwd when running as root', async (t) => 
 
   const command = 'echo'
   const args = ['hello world']
+  const expectedArgs = ['-c', `echo 'hello world'`]
   const options = {
+    scriptShell: 'sh',
     stdioString: true,
     cwd,
     env: {
@@ -37,7 +42,7 @@ t.test('infers uid/gid based on options.cwd when running as root', async (t) => 
   }
 
   const output = '"hello world"'
-  const interceptor = spawk.spawn(command, args, {
+  const interceptor = spawk.spawn(options.scriptShell, expectedArgs, {
     ...options,
     uid,
     gid,
@@ -47,8 +52,6 @@ t.test('infers uid/gid based on options.cwd when running as root', async (t) => 
   const child = await exec(command, args, options, extra)
   t.ok(interceptor.called, 'called child_process.spawn()')
   t.match(interceptor.calledWith, {
-    command,
-    args,
     options: {
       ...options,
       uid,
@@ -57,8 +60,8 @@ t.test('infers uid/gid based on options.cwd when running as root', async (t) => 
   }, 'passed the correct parameters to child_process.spawn()')
 
   t.match(child, {
-    cmd: command,
-    args,
+    cmd: options.scriptShell,
+    args: expectedArgs,
     code: 0,
     signal: undefined,
     stdout: '"hello world"',
@@ -73,7 +76,9 @@ t.test('infers uid/gid based on process.cwd() when running as root, and options.
 
   const command = 'echo'
   const args = ['hello world']
+  const expectedArgs = ['-c', `echo 'hello world'`]
   const options = {
+    scriptShell: 'sh',
     stdioString: true,
     env: {
       HOME: '/my/home',
@@ -85,7 +90,7 @@ t.test('infers uid/gid based on process.cwd() when running as root, and options.
   }
 
   const output = '"hello world"'
-  const interceptor = spawk.spawn(command, args, {
+  const interceptor = spawk.spawn(options.scriptShell, expectedArgs, {
     ...options,
     uid,
     gid,
@@ -95,8 +100,6 @@ t.test('infers uid/gid based on process.cwd() when running as root, and options.
   const child = await exec(command, args, options, extra)
   t.ok(interceptor.called, 'called child_process.spawn()')
   t.match(interceptor.calledWith, {
-    command,
-    args,
     options: {
       ...options,
       uid,
@@ -105,8 +108,8 @@ t.test('infers uid/gid based on process.cwd() when running as root, and options.
   }, 'passed the correct parameters to child_process.spawn()')
 
   t.match(child, {
-    cmd: command,
-    args,
+    cmd: options.scriptShell,
+    args: expectedArgs,
     code: 0,
     signal: undefined,
     stdout: '"hello world"',
