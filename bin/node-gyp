@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# this is a tiny wrapper that will be prepended to the front of the PATH if
+# the npm_config_node_gyp environment variable is set in order to be sure that
+# node-gyp is run from its configured location
+node "$npm_config_node_gyp" "$@"
+

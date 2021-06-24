@@ -1,8 +1,14 @@
-const { delimiter, normalize } = require('path')
 const t = require('tap')
 
 const {
+  delimiter,
+  normalize,
+  resolve,
+} = require('path')
+
+const {
   getBinPaths,
+  getGypPath,
   normalizePath,
   setPath,
 } = require('../lib/path.js')
@@ -48,6 +54,26 @@ t.test('getBinPaths()', async (t) => {
       normalize('/some/node_modules/.bin'),
       normalize('/node_modules/.bin'),
     ], 'returned the expected paths')
+  })
+})
+
+t.test('getGypPath()', async (t) => {
+  t.test('returns the path to our own bin directory when npm_config_node_gyp is set', async (t) => {
+    const env = {
+      npm_config_node_gyp: 'this value does not matter, it just needs to have one',
+    }
+    const expected = resolve(__dirname, '../bin')
+    const result = getGypPath({ env })
+    t.type(result, Array, 'result is an array')
+    t.equal(result.length, 1, 'result has one element')
+    t.equal(result[0], expected, 'returned our bin directory')
+  })
+
+  t.test('returns an empty array when npm_config_node_gyp is not set', async (t) => {
+    const env = {} // no npm_config_node_gyp
+    const result = getGypPath({ env })
+    t.type(result, Array, 'result is an array')
+    t.equal(result.length, 0, 'result has no elements')
   })
 })
 
@@ -100,6 +126,29 @@ t.test('setPath()', async (t) => {
     const result = setPath({ start, env })
     t.equal(env.PATH, originalPath, 'left the original env alone')
     t.equal(result.PATH, [
+      normalize('/some/directory/node_modules/.bin'),
+      normalize('/some/node_modules/.bin'),
+      normalize('/node_modules/.bin'),
+      originalPath,
+    ].join(delimiter), 'returned env with expected PATH, bins first')
+  })
+
+  t.test('PATH includes node-gyp shim directory when npm_config_node_gyp is set', async (t) => {
+    const start = '/some/directory'
+    const originalPath = [
+      '/one',
+      '/two',
+      '/three',
+    ].map(normalize).join(delimiter)
+    const env = {
+      npm_config_node_gyp: 'the value does not matter, it only needs to be truthy',
+      PATH: originalPath,
+    }
+
+    const result = setPath({ start, env })
+    t.equal(env.PATH, originalPath, 'left the original env alone')
+    t.equal(result.PATH, [
+      resolve(__dirname, '../bin'),
       normalize('/some/directory/node_modules/.bin'),
       normalize('/some/node_modules/.bin'),
       normalize('/node_modules/.bin'),
