@@ -1,4 +1,3 @@
-const { Formatter } = require('puka')
 const spawk = require('spawk')
 const t = require('tap')
 
@@ -9,15 +8,7 @@ t.beforeEach(() => {
   spawk.clean()
 })
 
-t.afterEach(() => {
-  Formatter.default = undefined
-})
-
 t.test('posix', async (t) => {
-  t.beforeEach(() => {
-    Formatter.default = Formatter.for('linux')
-  })
-
   t.test('escapes arguments correctly', async (t) => {
     const command = 'echo'
     const args = ['hello world']
@@ -55,10 +46,6 @@ t.test('posix', async (t) => {
 })
 
 t.test('windows', async (t) => {
-  t.beforeEach(() => {
-    Formatter.default = Formatter.for('win32')
-  })
-
   t.test('escapes simple arguments', async (t) => {
     const command = 'echo'
     const args = ['hello world']
