@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@npmcli/promise-spawn": "^2.0.0",
-    "infer-owner": "^1.0.4"
+    "infer-owner": "^1.0.4",
+    "puka": "^1.0.1"
   }
 }

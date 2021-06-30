@@ -1,4 +1,5 @@
 const { EventEmitter } = require('events')
+const { Formatter } = require('puka')
 const spawk = require('spawk')
 const t = require('tap')
 
@@ -49,18 +50,25 @@ const buildParameters = (name, opts = {}) => {
   const args = ['hello', name]
   const options = {
     cwd: '/some/dir',
+    scriptShell: 'sh',
     ...opts,
   }
   const extra = {
     description: `echoes "hello ${name}"`,
   }
+  const expected = {
+    command: options.scriptShell,
+    args: ['-c', `echo hello ${name}`], // no quotes, they're multiple args
+  }
 
-  return { command, args, options, extra }
+  return { command, args, options, extra, expected }
 }
 
 spawk.preventUnmatched()
 t.beforeEach((t) => {
   spawk.clean()
+  // set puka's default formatter to 'linux'
+  Formatter.default = Formatter.for('linux')
 
   // in order to test this reliably in all platforms, we can't send actual kill
   // signals because Windows emulates this behavior behind the scenes. instead,
@@ -80,15 +88,17 @@ t.beforeEach((t) => {
 })
 
 t.afterEach((t) => {
+  // remove the default formatter for puka
+  Formatter.default = undefined
   // restore the real process methods
   process.on = t.context.previous.on
   process.removeListener = t.context.previous.removeListener
 })
 
 t.test('forwards a signal to a background process only once', async (t) => {
-  const { command, args, options, extra } = buildParameters('background')
+  const { command, args, options, extra, expected } = buildParameters('background')
   const signal = randomSignal()
-  const interceptor = spawk.spawn(command, args, options)
+  const interceptor = spawk.spawn(expected.command, expected.args, options)
     .exitOnSignal(signal)
 
   // do not await, the child process is going to wait for our signal so it
@@ -99,13 +109,8 @@ t.test('forwards a signal to a background process only once', async (t) => {
   for (const signal of signals)
     t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
-  // we actually ran and passed the correct parameters
+  // we actually ran
   t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    command,
-    args,
-    options,
-  }, 'passed the correct parameters to child_process.spawn()')
 
   // send the signal, no need to wait for it since the child will reject
   sendSignal(t.context.events, signal)
@@ -115,8 +120,8 @@ t.test('forwards a signal to a background process only once', async (t) => {
   // note that in windows, the close event never sets a signal, instead it
   // sets the code to 1 so the assertion is slightly different there.
   await t.rejects(child, {
-    cmd: command,
-    args,
+    cmd: expected.command,
+    args: expected.args,
     ...(
       process.platform === 'win32'
         ? { code: 1 }
@@ -144,9 +149,9 @@ t.test('forwards a signal to multiple background children only once', async (t) 
 
   // create an array of children
   const children = ['backgroundOne', 'backgroundTwo'].map((name, index) => {
-    const { command, args, options, extra } = buildParameters(name)
+    const { command, args, options, extra, expected } = buildParameters(name)
     const signal = childSignals[index]
-    const interceptor = spawk.spawn(command, args, options)
+    const interceptor = spawk.spawn(expected.command, expected.args, options)
     if (index === 0)
       interceptor.exitOnSignal(signal)
     else
@@ -158,18 +163,12 @@ t.test('forwards a signal to multiple background children only once', async (t) 
       t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
     t.ok(interceptor.called, 'called child_process.spawn()')
-    t.match(interceptor.calledWith, {
-      command,
-      args,
-      options,
-    })
-
     // the first one will reject on the first signal, the second will stay
     // running
     if (index === 0) {
       return t.rejects(child, {
-        cmd: command,
-        args,
+        cmd: expected.command,
+        args: expected.args,
         ...(
           process.platform === 'win32'
             ? { code: 1 }
@@ -209,13 +208,13 @@ t.test('forwards a signal to multiple background children only once', async (t) 
 })
 
 t.test('forwards a signal to a foreground child until it exits, stdio=inherit', async (t) => {
-  const { command, args, options, extra } = buildParameters('foreground', { stdio: 'inherit' })
+  const { command, args, options, extra, expected } = buildParameters('foreground', { stdio: 'inherit' })
 
   // we'll send the ignoredSignal first so that we can make sure our handlers
   // stay in place afterwards, then we'll send the exitSignal to allow the
   // child to exit and make sure all of our handlers were cleaned up
   const [ignoredSignal, exitSignal] = randomSignals(2)
-  const interceptor = spawk.spawn(command, args, options)
+  const interceptor = spawk.spawn(expected.command, expected.args, options)
     .exitOnSignal(exitSignal)
 
   const child = exec(command, args, options, extra)
@@ -224,12 +223,6 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
     t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
   t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    command,
-    args,
-    options,
-  }, 'passed the correct parameters to child_process.spawn()')
-
   // send the ignored signal and wait to make sure we get it
   await sendSignal(t.context.events, ignoredSignal)
 
@@ -242,8 +235,8 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
 
   // and wait for the promise to reject
   await t.rejects(child, {
-    cmd: command,
-    args,
+    cmd: expected.command,
+    args: expected.args,
     ...(
       process.platform === 'win32'
         ? { code: 1 }
@@ -257,13 +250,13 @@ t.test('forwards a signal to a foreground child until it exits, stdio=inherit', 
 })
 
 t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,inherit,inherit]', async (t) => {
-  const { command, args, options, extra } = buildParameters('foreground', { stdio: ['inherit', 'inherit', 'inherit'] })
+  const { command, args, options, extra, expected } = buildParameters('foreground', { stdio: ['inherit', 'inherit', 'inherit'] })
 
   // we'll send the ignoredSignal first so that we can make sure our handlers
   // stay in place afterwards, then we'll send the exitSignal to allow the
   // child to exit and make sure all of our handlers were cleaned up
   const [ignoredSignal, exitSignal] = randomSignals(2)
-  const interceptor = spawk.spawn(command, args, options)
+  const interceptor = spawk.spawn(expected.command, expected.args, options)
     .exitOnSignal(exitSignal)
 
   const child = exec(command, args, options, extra)
@@ -272,12 +265,6 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
     t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
   t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    command,
-    args,
-    options,
-  }, 'passed the correct parameters to child_process.spawn()')
-
   // send the ignored signal and wait to make sure we get it
   await sendSignal(t.context.events, ignoredSignal)
 
@@ -290,8 +277,8 @@ t.test('forwards a signal to a foreground child until it exits, stdio=[inherit,i
 
   // and wait for the promise to reject
   await t.rejects(child, {
-    cmd: command,
-    args,
+    cmd: expected.command,
+    args: expected.args,
     ...(
       process.platform === 'win32'
         ? { code: 1 }
@@ -309,10 +296,10 @@ t.test('forwards signals to multiple foreground children until they exit', async
 
   // create an array of children
   const children = ['foregroundOne', 'foregroundTwo'].map((name, index) => {
-    const { command, args, options, extra } = buildParameters(name, { stdio: 'inherit' })
+    const { command, args, options, extra, expected } = buildParameters(name, { stdio: 'inherit' })
     // each child will exit for a different signal
     const signal = childSignals[index]
-    const interceptor = spawk.spawn(command, args, options)
+    const interceptor = spawk.spawn(expected.command, expected.args, options)
       .exitOnSignal(signal)
 
     const child = exec(command, args, options, extra)
@@ -321,17 +308,12 @@ t.test('forwards signals to multiple foreground children until they exit', async
       t.equal(t.context.events.listenerCount(signal), 1, `${signal} has only one handler after spawning`)
 
     t.ok(interceptor.called, 'called child_process.spawn()')
-    t.match(interceptor.calledWith, {
-      command,
-      args,
-      options,
-    })
 
     return {
       child,
       assertion: {
-        cmd: command,
-        args,
+        cmd: expected.command,
+        args: expected.args,
         ...(
           process.platform === 'win32'
             ? { code: 1 }

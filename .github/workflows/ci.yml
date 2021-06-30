@@ -21,6 +21,8 @@ jobs:
         - os: windows-latest
           shell: bash
         - os: windows-latest
+          shell: cmd
+        - os: windows-latest
           shell: powershell
 
     runs-on: ${{ matrix.platform.os }}

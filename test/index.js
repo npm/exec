@@ -1,3 +1,6 @@
+// we grab the Formatter class from puka so we can force the escaping to be
+// for the platform we want in each test
+const { Formatter } = require('puka')
 const spawk = require('spawk')
 const t = require('tap')
 
@@ -5,13 +8,20 @@ const exec = require('../lib/index.js')
 
 spawk.preventUnmatched()
 t.beforeEach(() => {
+  Formatter.default = Formatter.for('linux')
   spawk.clean()
+})
+
+t.afterEach(() => {
+  Formatter.default = undefined
 })
 
 t.test('can run a child process', async (t) => {
   const command = 'echo'
   const args = ['hello world']
+  const expectedArgs = ['-c', `echo 'hello world'`]
   const options = {
+    scriptShell: 'sh',
     stdioString: true,
     cwd: '/some/dir',
     env: {
@@ -24,20 +34,15 @@ t.test('can run a child process', async (t) => {
   }
 
   const output = '"hello world"'
-  const interceptor = spawk.spawn(command, args, options)
+  const interceptor = spawk.spawn(options.scriptShell, expectedArgs, options)
     .stdout(output)
 
   const child = await exec(command, args, options, extra)
   t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    command,
-    args,
-    options,
-  }, 'passed the correct parameters to child_process.spawn()')
 
   t.match(child, {
-    cmd: command,
-    args,
+    cmd: options.scriptShell,
+    args: expectedArgs,
     code: 0,
     signal: undefined,
     stdout: '"hello world"',
@@ -49,7 +54,9 @@ t.test('can run a child process', async (t) => {
 t.test('do not end stdin on the child when it does not have one', async (t) => {
   const command = 'echo'
   const args = ['hello world']
+  const expectedArgs = ['-c', `echo 'hello world'`]
   const options = {
+    scriptShell: 'sh',
     stdioString: true,
     cwd: '/some/dir',
     stdio: 'inherit',
@@ -62,19 +69,14 @@ t.test('do not end stdin on the child when it does not have one', async (t) => {
     description: 'echoes "hello world"',
   }
 
-  const interceptor = spawk.spawn(command, args, options)
+  const interceptor = spawk.spawn(options.scriptShell, expectedArgs, options)
 
   const child = await exec(command, args, options, extra)
   t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    command,
-    args,
-    options,
-  }, 'passed the correct parameters to child_process.spawn()')
 
   t.match(child, {
-    cmd: command,
-    args,
+    cmd: options.scriptShell,
+    args: expectedArgs,
     code: 0,
     signal: undefined,
     stdout: null,
