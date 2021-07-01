@@ -1,0 +1,27 @@
+toc:
+- name: Basic API
+  children:
+  - sh
+  - unquoted
+- name: Advanced API
+  description: |
+    If these functions make life easier for you, go ahead and use them; they
+    are just as well supported as the above. But if you aren't certain you
+    need them, you probably don't.
+  children:
+  - quoteForShell
+  - quoteForCmd
+  - quoteForSh
+  - ShellString
+- name: Secret API
+  description: |
+    Some internals of string formatting have been exposed for the ambitious and
+    brave souls who want to try to extend Puka to handle more shells or custom
+    interpolated values. This ‘secret’ API is partially documented in the code
+    but not here, and the semantic versioning guarantees on this API are bumped
+    down by one level: in other words, minor version releases of Puka can change
+    the secret API in backward-incompatible ways, and patch releases can add or
+    deprecate functionality.
+
+    If it's not even documented in the code, use at your own risk—no semver
+    guarantees apply.

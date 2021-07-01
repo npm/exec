@@ -1,5 +1,5 @@
 const { EventEmitter } = require('events')
-const { Formatter } = require('puka')
+const { Formatter } = require('../puka-dev')
 const spawk = require('spawk')
 const t = require('tap')
 

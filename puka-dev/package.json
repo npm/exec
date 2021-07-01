@@ -1,0 +1,208 @@
+{
+  "name": "puka",
+  "version": "1.0.1",
+  "author": "Ryan Hendrickson <ryan.hendrickson@alum.mit.edu>",
+  "description": "A cross-platform library for safely passing strings through shells",
+  "keywords": [
+    "args",
+    "arguments",
+    "cmd",
+    "command",
+    "command-line",
+    "cross-platform",
+    "escape",
+    "escaping",
+    "exec",
+    "linux",
+    "mac",
+    "macos",
+    "osx",
+    "quote",
+    "quoting",
+    "sh",
+    "shell",
+    "spawn",
+    "unix",
+    "win",
+    "win32",
+    "windows"
+  ],
+  "license": "MIT",
+  "homepage": "https://gitlab.com/rhendric/puka",
+  "repository": "gitlab:rhendric/puka",
+  "bugs": "https://gitlab.com/rhendric/puka/issues",
+  "engines": {
+    "node": ">=4"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@ava/babel": "^1.0.1",
+    "@babel/core": "^7.9.6",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-transform-destructuring": "^7.9.5",
+    "@babel/plugin-transform-modules-commonjs": "^7.9.6",
+    "@babel/plugin-transform-parameters": "^7.9.5",
+    "@babel/plugin-transform-spread": "^7.8.3",
+    "@babel/register": "^7.9.0",
+    "@rollup/plugin-babel": "^5.0.0",
+    "ava": "^3.8.2",
+    "babel-eslint": "^10.1.0",
+    "chalk": "^4.0.0",
+    "chance-generators": "^3.5.2",
+    "cob-commitizen": "^1.0.1",
+    "codecov": "^3.6.5",
+    "commitizen": "^4.1.2",
+    "documentation": "^13.0.0",
+    "echo-cli": "^1.0.8",
+    "escodegen": "^1.14.1",
+    "eslint": "^7.0.0",
+    "eslint-plugin-import": "^2.20.2",
+    "esprima": "^4.0.1",
+    "expect-arg": "file:scripts/expect-arg",
+    "gulp": "^4.0.2",
+    "gulp-transform": "^3.0.5",
+    "husky": "^4.2.5",
+    "js-yaml": "^3.13.1",
+    "json": "^9.0.6",
+    "lodash": "^4.17.15",
+    "mdast-util-inject": "^1.1.0",
+    "merge-stream": "^2.0.0",
+    "nodecat": "^2.0.0",
+    "nyc": "^15.0.1",
+    "remark": "^12.0.0",
+    "remark-toc": "^7.0.0",
+    "rollup": "^2.10.2",
+    "rollup-plugin-cleanup": "^3.1.1",
+    "rollup-stream": "^1.24.1",
+    "unexpected": "^11.14.0",
+    "unexpected-check": "^2.4.1",
+    "unexpected-stream": "^4.0.0",
+    "vinyl-source-stream": "^2.0.0"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "precommit": "yarn dist && git add README.md src/index.js dist/index.js",
+    "dist": "gulp dist",
+    "lint": "eslint .",
+    "test": "ava",
+    "test:spawn": "ava -m \"*[spawn]*\"",
+    "test:coverage": "nyc -s ava -m \"!*[spawn]*\"",
+    "coverage:html": "nyc report -r html",
+    "codecov": "nyc report -r text-lcov > coverage.lcov && codecov"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cob-commitizen"
+    }
+  },
+  "ava": {
+    "babel": true,
+    "require": [
+      "@babel/register",
+      "./test/helpers/ava-unexpected"
+    ],
+    "timeout": "10m"
+  },
+  "babel": {
+    "plugins": [
+      [
+        "@babel/proposal-class-properties",
+        {
+          "loose": true
+        }
+      ],
+      "@babel/transform-destructuring",
+      "@babel/transform-modules-commonjs",
+      "@babel/transform-parameters",
+      "@babel/transform-spread"
+    ]
+  },
+  "eslintIgnore": [
+    "coverage",
+    "dist",
+    "**/node_modules"
+  ],
+  "nyc": {
+    "exclude": [
+      "dist",
+      "**/*.test.js",
+      "test"
+    ]
+  },
+  "enginePatches": {
+    "<10": {
+      "devDependencies": {
+        "@ava/babel": null,
+        "@babel/core": null,
+        "@babel/plugin-proposal-class-properties": null,
+        "@babel/plugin-transform-destructuring": null,
+        "@babel/plugin-transform-modules-commonjs": null,
+        "@babel/plugin-transform-parameters": null,
+        "@babel/plugin-transform-spread": null,
+        "@babel/register": null,
+        "@rollup/plugin-babel": null,
+        "ava": "^0.25.0",
+        "babel-core": "^6.26.0",
+        "babel-eslint": null,
+        "babel-plugin-transform-async-to-generator": "^6.24.1",
+        "babel-plugin-transform-class-properties": "^6.22.0",
+        "babel-plugin-transform-es2015-destructuring": "^6.23.0",
+        "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
+        "babel-plugin-transform-es2015-parameters": "^6.24.1",
+        "babel-plugin-transform-es2015-spread": "^6.22.0",
+        "babel-plugin-external-helpers": "^6.22.0",
+        "chalk": "^3.0.0",
+        "cob-commitizen": null,
+        "commitizen": null,
+        "documentation": null,
+        "eslint": null,
+        "eslint-plugin-import": null,
+        "gulp": null,
+        "gulp-transform": null,
+        "husky": null,
+        "nodecat": null,
+        "rollup": null,
+        "rollup-plugin-cleanup": null,
+        "rollup-stream": null
+      },
+      "ava": {
+        "babel": "inherit",
+        "require": [
+          "babel-register",
+          "./test/helpers/ava-unexpected"
+        ]
+      },
+      "babel": {
+        "plugins": [
+          "transform-async-to-generator",
+          "transform-class-properties",
+          "transform-es2015-destructuring",
+          "transform-es2015-modules-commonjs",
+          "transform-es2015-parameters",
+          "transform-es2015-spread"
+        ]
+      }
+    },
+    "<8": {
+      "devDependencies": {
+        "chalk": "^2.4.2",
+        "nyc": "^14.1.1"
+      },
+      "resolutions": {
+        "is-plain-obj": "1.1.0",
+        "pkg-up": "2.0.0"
+      }
+    },
+    "<6": {
+      "devDependencies": {
+        "nyc": "^11.9.0",
+        "unexpected-stream": "^3.1.0"
+      },
+      "resolutions": {
+        "http-proxy-agent": "2.1.0",
+        "https-proxy-agent": "2.1.0"
+      }
+    }
+  },
+  "private": true
+}

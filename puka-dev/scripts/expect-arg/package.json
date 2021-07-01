@@ -1,0 +1,6 @@
+{
+  "name": "expect-arg",
+  "version": "0.0.0",
+  "bin": "index.js",
+  "private": true
+}
