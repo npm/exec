@@ -1,4 +1,4 @@
-const { Formatter } = require('puka')
+const { Formatter } = require('../puka-dev')
 const inferOwner = require('infer-owner')
 const spawk = require('spawk')
 const t = require('tap')

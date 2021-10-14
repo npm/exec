@@ -1,6 +1,6 @@
 // we grab the Formatter class from puka so we can force the escaping to be
 // for the platform we want in each test
-const { Formatter } = require('puka')
+const { Formatter } = require('../puka-dev')
 const spawk = require('spawk')
 const t = require('tap')
 

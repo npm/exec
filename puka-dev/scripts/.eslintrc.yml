@@ -1,0 +1,6 @@
+env:
+  es6: false
+rules:
+  no-console: off
+  prefer-destructuring: off
+  strict: off
