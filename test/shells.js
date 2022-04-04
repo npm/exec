@@ -4,13 +4,15 @@ const shells = require('../lib/shells.js')
 const names = Object.keys(shells.shells)
 
 t.test('finds known shell', async (t) => {
-  for (const name of names)
+  for (const name of names) {
     t.same(shells.lookup(name), shells.shells[name], `found ${name}`)
+  }
 })
 
 t.test('finds known shell with .exe', async (t) => {
-  for (const name of names)
+  for (const name of names) {
     t.same(shells.lookup(`${name}.exe`), shells.shells[name], `found ${name}.exe`)
+  }
 })
 
 t.test('returns default for no match', async (t) => {
