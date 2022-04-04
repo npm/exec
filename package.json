@@ -4,8 +4,8 @@
   "description": "run child processes with npm CLI conventions",
   "main": "lib/index.js",
   "files": [
-    "lib",
-    "bin"
+    "bin/",
+    "lib/"
   ],
   "scripts": {
     "preversion": "npm test",
@@ -14,25 +14,39 @@
     "snap": "tap",
     "test": "tap",
     "npmclilint": "npmcli-lint",
-    "lint": "npm run npmclilint -- \"lib/**/*.*js\" \"test/**/*.*js\"",
+    "lint": "eslint \"**/*.js\"",
     "lintfix": "npm run lint -- --fix",
-    "posttest": "npm run lint --",
-    "postsnap": "npm run lintfix --"
+    "posttest": "npm run lint",
+    "postsnap": "npm run lintfix --",
+    "postlint": "template-oss-check",
+    "template-oss-apply": "template-oss-apply --force"
   },
   "keywords": [
     "npm",
     "oss"
   ],
-  "author": "npm Inc. <support@npmjs.com>",
+  "author": "GitHub Inc.",
   "license": "ISC",
   "devDependencies": {
-    "@npmcli/lint": "^1.0.1",
+    "@npmcli/eslint-config": "^3.0.1",
+    "@npmcli/template-oss": "3.2.2",
     "spawk": "^1.7.0",
-    "tap": "^15.0.9"
+    "tap": "^16.0.1"
   },
   "dependencies": {
     "@npmcli/promise-spawn": "^2.0.0",
     "infer-owner": "^1.0.4",
     "puka": "^1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/npm/exec.git"
+  },
+  "engines": {
+    "node": "^12.13.0 || ^14.15.0 || >=16.0.0"
+  },
+  "templateOSS": {
+    "//@npmcli/template-oss": "This file is partially managed by @npmcli/template-oss. Edits may be overwritten.",
+    "version": "3.2.2"
   }
 }

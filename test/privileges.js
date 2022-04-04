@@ -70,50 +70,51 @@ t.test('infers uid/gid based on options.cwd when running as root', async (t) => 
   }, 'result has all expected properties')
 })
 
-t.test('infers uid/gid based on process.cwd() when running as root, and options.cwd is unset', async (t) => {
-  // get the owner of cwd, we'll expect this in the options passed to spawn
-  const { uid, gid } = await inferOwner(process.cwd())
+t.test('infers uid/gid based on process.cwd() when running as root, and options.cwd is unset',
+  async (t) => {
+    // get the owner of cwd, we'll expect this in the options passed to spawn
+    const { uid, gid } = await inferOwner(process.cwd())
 
-  const command = 'echo'
-  const args = ['hello world']
-  const expectedArgs = ['-c', `echo 'hello world'`]
-  const options = {
-    scriptShell: 'sh',
-    stdioString: true,
-    env: {
-      HOME: '/my/home',
-    },
-  }
+    const command = 'echo'
+    const args = ['hello world']
+    const expectedArgs = ['-c', `echo 'hello world'`]
+    const options = {
+      scriptShell: 'sh',
+      stdioString: true,
+      env: {
+        HOME: '/my/home',
+      },
+    }
 
-  const extra = {
-    description: 'echoes "hello world"',
-  }
+    const extra = {
+      description: 'echoes "hello world"',
+    }
 
-  const output = '"hello world"'
-  const interceptor = spawk.spawn(options.scriptShell, expectedArgs, {
-    ...options,
-    uid,
-    gid,
-  })
-    .stdout(output)
-
-  const child = await exec(command, args, options, extra)
-  t.ok(interceptor.called, 'called child_process.spawn()')
-  t.match(interceptor.calledWith, {
-    options: {
+    const output = '"hello world"'
+    const interceptor = spawk.spawn(options.scriptShell, expectedArgs, {
       ...options,
       uid,
       gid,
-    },
-  }, 'passed the correct parameters to child_process.spawn()')
+    })
+      .stdout(output)
 
-  t.match(child, {
-    cmd: options.scriptShell,
-    args: expectedArgs,
-    code: 0,
-    signal: undefined,
-    stdout: '"hello world"',
-    stderr: '',
-    ...extra,
-  }, 'result has all expected properties')
-})
+    const child = await exec(command, args, options, extra)
+    t.ok(interceptor.called, 'called child_process.spawn()')
+    t.match(interceptor.calledWith, {
+      options: {
+        ...options,
+        uid,
+        gid,
+      },
+    }, 'passed the correct parameters to child_process.spawn()')
+
+    t.match(child, {
+      cmd: options.scriptShell,
+      args: expectedArgs,
+      code: 0,
+      signal: undefined,
+      stdout: '"hello world"',
+      stderr: '',
+      ...extra,
+    }, 'result has all expected properties')
+  })
