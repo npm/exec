@@ -1,5 +1,8 @@
 # `@npmcli/exec`
 
+# THIS REPOSITORY IS DEPRECATED AND ARCHIVED, THE MODULE HERE WAS NEVER PUBLISHED. SEE @npmcli/promise-spawn
+
+
 This is the module that the npm CLI team uses to run child processes, with our
 use cases and conventions.
 
